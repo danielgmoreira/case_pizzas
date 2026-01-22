@@ -3,22 +3,7 @@ import pandas as pd
 import plotly.express as px
 
 # --- CONFIGURAÇÃO DA PÁGINA ---
-st.set_page_config(page_title="Dashboard Pizzaria - Estudo de Caso", layout="wide", page_icon="🍕")
-
-# --- ESTILO PERSONALIZADO (CSS) ---
-# Força o fundo escuro nos elementos nativos e texto amarelo
-st.markdown("""
-    <style>
-    /* Títulos em Amarelo */
-    h1, h2, h3, .css-10trblm {
-        color: #000 !important;
-    }
-    /* Métricas (Números grandes) em Amarelo */
-    div[data-testid="stMetricValue"] {
-        color: #000 !important;
-    }
-    </style>
-""", unsafe_allow_html=True)
+st.set_page_config(page_title="Dashboard Pizzaria - Estudo de Caso Nomad", layout="wide", page_icon="🍕")
 
 # Cor Principal para os Gráficos
 COR_PRINCIPAL = ['#FFC300'] # Amarelo Ouro
@@ -61,7 +46,7 @@ categorias = st.sidebar.multiselect(
     default=df['pizza_category'].unique()
 )
 
-# Filtro de Data (Correção do erro de Comprimento)
+# Filtro de Data
 data_min = df['order_date'].min()
 data_max = df['order_date'].max()
 periodo = st.sidebar.date_input("Período", [data_min, data_max])
@@ -78,7 +63,7 @@ else:
 
 # --- 3. DASHBOARD (LAYOUT AMARELO/PRETO) ---
 
-st.title("🍕 Dashboard Estratégico")
+st.title("🍕 Dashboard Estratégico - Estudo de Caso Nomad")
 st.markdown("---")
 
 # KPIs
@@ -91,14 +76,13 @@ col4.metric("Ticket Médio", f"R$ {ticket_medio:,.2f}")
 
 st.markdown("---")
 
-# GRÁFICOS
+# Gráficos
 col_graf1, col_graf2 = st.columns(2)
 
 with col_graf1:
     st.subheader("🏆 Melhores Pizzas (Receita)")
     top_pizzas = df_filtrado.groupby('pizza_name')['receita_total'].sum().nlargest(5).reset_index()
-    
-    # Configuração Visual: Fundo Preto (plotly_dark) e Barras Amarelas
+
     fig_top = px.bar(
         top_pizzas, 
         x='receita_total', 
@@ -107,6 +91,7 @@ with col_graf1:
         template="plotly_dark",
         color_discrete_sequence=COR_PRINCIPAL
     )
+    
     # Remove linhas de grade desnecessárias para visual limpo
     fig_top.update_layout(yaxis=dict(title=''), xaxis=dict(title='Receita ($)'))
     st.plotly_chart(fig_top, use_container_width=True)
@@ -123,11 +108,11 @@ with col_graf2:
         template="plotly_dark",
         color_discrete_sequence=['#555555'] # Cinza para indicar baixa performance (ou use amarelo se preferir)
     )
-    fig_low.update_traces(marker_color='#FFC300') # Forçando amarelo também aqui
+    fig_low.update_traces(marker_color='#FF5733')  # Tom laranja para destacar
     fig_low.update_layout(yaxis=dict(title=''), xaxis=dict(title='Qtd Vendida'))
     st.plotly_chart(fig_low, use_container_width=True)
 
-# Curva Horária
+# Curva Horário
 st.subheader("⏰ Picos de Horário")
 vendas_hora = df_filtrado.groupby('hora')['quantity'].sum().reset_index()
 
@@ -135,9 +120,62 @@ fig_hora = px.line(
     vendas_hora, 
     x='hora', 
     y='quantity', 
+    labels={'hora': 'Hora do Dia', 'quantity': 'Pizzas Vendidas'},
     markers=True, 
     template="plotly_dark",
     color_discrete_sequence=COR_PRINCIPAL
 )
+
 fig_hora.update_layout(xaxis=dict(tickmode='linear', dtick=1))
 st.plotly_chart(fig_hora, use_container_width=True)
+
+st.markdown("---")
+
+col_new1, col_new2 = st.columns(2)
+
+# Análise de tamanho (Mix de Produto)
+with col_new1:
+    st.subheader("Preferência de Tamanho")
+    # Agrupa por tamanho
+    df_size = df_filtrado.groupby('pizza_size')['quantity'].sum().reset_index()
+    
+    # Ordem lógica dos tamanhos para o gráfico
+    ordem_tamanhos = ['S', 'M', 'L', 'XL', 'XXL']
+    
+    fig_size = px.pie(df_size, values='quantity', names='pizza_size', 
+                      title='Distribuição de Vendas por Tamanho',
+                      template="plotly_dark",
+                      hole=0.4) # Gráfico de Rosca
+    st.plotly_chart(fig_size, use_container_width=True)
+
+# Sazonalidade semanal
+with col_new2:
+    st.subheader("Performance Semanal")
+    # Cria coluna de nome do dia
+    df_filtrado['dia_semana'] = df_filtrado['order_date'].dt.day_name()
+    
+    # Agrupa por dia e reordena
+    vendas_dia = df_filtrado.groupby('dia_semana')['quantity'].sum().reindex(
+        ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+    ).reset_index()
+    
+    fig_week = px.bar(vendas_dia, x='dia_semana', y='quantity',
+                      title='Vendas por Dia da Semana',
+                      labels={'dia_semana': 'Dia da Semana', 'quantity': 'Pizzas Vendidas'},
+                      template="plotly_dark",
+                      color_discrete_sequence=['#FFC300'])
+    st.plotly_chart(fig_week, use_container_width=True)
+
+# Tamanho da Cesta (Oportunidade de Combo)
+st.subheader("🛒 Comportamento do Cliente (Pizzas por Pedido)")
+basket_size = df_filtrado.groupby('order_id')['quantity'].sum().reset_index()
+basket_dist = basket_size['quantity'].value_counts().reset_index()
+basket_dist.columns = ['qtd_pizzas_no_pedido', 'total_pedidos']
+
+fig_basket = px.bar(basket_dist, x='qtd_pizzas_no_pedido', y='total_pedidos',
+                    title='Quantas pizzas os clientes levam por vez?',
+                    labels={'qtd_pizzas_no_pedido': 'Pizzas no Pedido', 'total_pedidos': 'Volume de Pedidos'},
+                    template="plotly_dark",
+                    text_auto=True,
+                    color_discrete_sequence=['#FFC300'])
+st.plotly_chart(fig_basket, use_container_width=True)
