@@ -61,7 +61,7 @@ if len(periodo) == 2:
 else:
     df_filtrado = df[df['pizza_category'].isin(categorias)]
 
-# --- 3. DASHBOARD (LAYOUT AMARELO/PRETO) ---
+# --- 3. DASHBOARD ---
 
 st.title("🍕 Dashboard Estratégico - Estudo de Caso Nomad")
 st.markdown("---")
@@ -106,7 +106,7 @@ with col_graf2:
         y='pizza_name', 
         orientation='h', 
         template="plotly_dark",
-        color_discrete_sequence=['#555555'] # Cinza para indicar baixa performance (ou use amarelo se preferir)
+        color_discrete_sequence=['#555555'] 
     )
     fig_low.update_traces(marker_color='#FF5733')  # Tom laranja para destacar
     fig_low.update_layout(yaxis=dict(title=''), xaxis=dict(title='Qtd Vendida'))
